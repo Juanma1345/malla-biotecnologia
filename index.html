@@ -19,12 +19,22 @@
       cursor: pointer;
       transition: background-color 0.3s, opacity 0.3s;
       opacity: 0.6;
+      user-select: none;
     }
     .materia:hover {
       background-color: #dff0d8;
     }
+    .materia.bloqueada {
+      background-color: #555;
+      opacity: 0.4;
+      cursor: default;
+    }
+    .materia.cursando {
+      background-color: #fff176; /* amarillo claro */
+      opacity: 1;
+    }
     .materia.aprobada {
-      background-color: #c8e6c9;
+      background-color: #4caf50; /* verde fuerte */
       opacity: 1;
     }
     .materia.desbloqueada {
@@ -36,33 +46,43 @@
       background-color: #eef;
       border-radius: 6px;
       display: none;
+      user-select: text;
     }
     .anio {
+      display: inline-block;
+      vertical-align: top;
+      margin-right: 20px;
       margin-bottom: 30px;
       padding: 10px;
-      border-left: 6px solid #0074D9;
+      border: 2px solid #0074D9;
       background-color: #e3ecf5;
       border-radius: 8px;
+      width: 300px;
     }
     .titulo-anio {
-      font-size: 1.4em;
+      font-size: 1.2em;
       margin-bottom: 10px;
+      text-align: center;
+      font-weight: bold;
     }
     .cuatrimestre {
       margin-bottom: 20px;
-      padding-left: 15px;
+      padding: 5px;
     }
     .titulo-cuatrimestre {
-      font-size: 1.1em;
+      font-size: 1em;
       font-weight: bold;
       margin-bottom: 5px;
-      border-bottom: 1px dashed #aaa;
+      text-align: center;
+      background-color: #cce0f5;
+      padding: 4px;
+      border-radius: 4px;
     }
   </style>
 </head>
 <body>
   <h1>Malla Interactiva - Licenciatura en Biotecnología</h1>
-  <p><em>Haz doble clic sobre una materia para marcarla como aprobada. Se desbloquean automáticamente las correlativas.</em></p>
+  <p><em>Doble clic sobre una materia para marcarla aprobada (verde). Clic simple para marcarla cursando (amarillo). Las correlativas se desbloquean automáticamente.</em></p>
   <div id="malla"></div>
 
   <script>
@@ -125,6 +145,7 @@
     ];
 
     const aprobadas = new Set();
+    const cursando = new Set();
 
     function estaDesbloqueada(materia) {
       if (!materia.correlativas) return true;
@@ -134,6 +155,8 @@
     function renderMalla() {
       const mallaDiv = document.getElementById("malla");
       mallaDiv.innerHTML = "";
+      mallaDiv.style.display = "flex";
+      mallaDiv.style.flexWrap = "wrap";
 
       for (const [anio, cuatris] of Object.entries(materiasPorCuatrimestre)) {
         const anioDiv = document.createElement("div");
@@ -162,10 +185,16 @@
             div.id = materia.codigo;
             div.textContent = `${materia.codigo} - ${materia.nombre}`;
 
-            if (aprobadas.has(materia.codigo)) {
-              div.classList.add("aprobada");
-            } else if (estaDesbloqueada(materia)) {
+            if (!estaDesbloqueada(materia)) {
+              div.classList.add("bloqueada");
+              div.style.cursor = "default";
+            } else {
               div.classList.add("desbloqueada");
+              if (aprobadas.has(materia.codigo)) {
+                div.classList.add("aprobada");
+              } else if (cursando.has(materia.codigo)) {
+                div.classList.add("cursando");
+              }
             }
 
             if (materia.correlativas) {
@@ -174,16 +203,35 @@
               correlativasDiv.innerHTML = `<strong>Correlativas:</strong> ${materia.correlativas.join(", ")}`;
               div.appendChild(correlativasDiv);
 
-              div.addEventListener("click", () => {
-                correlativasDiv.style.display = correlativasDiv.style.display === "none" ? "block" : "none";
+              div.addEventListener("click", (e) => {
+                if (estaDesbloqueada(materia)) {
+                  correlativasDiv.style.display = correlativasDiv.style.display === "none" ? "block" : "none";
+                }
               });
             }
 
-            div.addEventListener("dblclick", () => {
+            // Click simple para marcar cursando
+            div.addEventListener("click", (e) => {
+              if (!estaDesbloqueada(materia)) return;
+              e.stopPropagation();
+              if (aprobadas.has(materia.codigo)) return; // si ya aprobada, no cambia a cursando
+              if (cursando.has(materia.codigo)) {
+                cursando.delete(materia.codigo);
+              } else {
+                cursando.add(materia.codigo);
+              }
+              renderMalla();
+            });
+
+            // Doble click para marcar aprobada
+            div.addEventListener("dblclick", (e) => {
+              if (!estaDesbloqueada(materia)) return;
+              e.stopPropagation();
               if (aprobadas.has(materia.codigo)) {
                 aprobadas.delete(materia.codigo);
               } else {
                 aprobadas.add(materia.codigo);
+                cursando.delete(materia.codigo);
               }
               renderMalla();
             });
