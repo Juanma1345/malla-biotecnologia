@@ -10,6 +10,14 @@
       margin: 20px;
       background-color: #f0f4f8;
     }
+    #buscador {
+      margin-bottom: 20px;
+      padding: 8px 12px;
+      font-size: 1em;
+      width: 300px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
     .materia {
       border: 1px solid #ccc;
       border-radius: 8px;
@@ -20,6 +28,8 @@
       transition: background-color 0.3s, opacity 0.3s;
       opacity: 0.6;
       user-select: none;
+      max-width: 280px;
+      word-wrap: break-word;
     }
     .materia:hover {
       background-color: #dff0d8;
@@ -78,12 +88,37 @@
       padding: 4px;
       border-radius: 4px;
     }
+    /* Notificación */
+    #notificacion {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #4caf50;
+      color: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      font-weight: bold;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s;
+      z-index: 1000;
+      max-width: 300px;
+    }
+    #notificacion.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
   </style>
 </head>
 <body>
   <h1>Malla Interactiva - Licenciatura en Biotecnología</h1>
   <p><em>Doble clic sobre una materia para marcarla aprobada (verde). Clic simple para marcarla cursando (amarillo). Las correlativas se desbloquean automáticamente.</em></p>
+  <input type="text" id="buscador" placeholder="Buscar materia por código o nombre..." />
+
   <div id="malla"></div>
+
+  <div id="notificacion"></div>
 
   <script>
     const materiasPorCuatrimestre = {
@@ -144,19 +179,44 @@
       { codigo: "N9", nombre: "PROYECTOS BIOTECNOLÓGICOS", correlativas: ["N13", "N8", "00159", "00162", "N7"] },
     ];
 
-    const aprobadas = new Set();
-    const cursando = new Set();
+    let aprobadas = new Set();
+    let cursando = new Set();
+
+    // Cargar desde localStorage
+    function cargarProgreso() {
+      const aprobadasLS = localStorage.getItem('biotec_aprobadas');
+      const cursandoLS = localStorage.getItem('biotec_cursando');
+      if (aprobadasLS) aprobadas = new Set(JSON.parse(aprobadasLS));
+      if (cursandoLS) cursando = new Set(JSON.parse(cursandoLS));
+    }
+    // Guardar en localStorage
+    function guardarProgreso() {
+      localStorage.setItem('biotec_aprobadas', JSON.stringify([...aprobadas]));
+      localStorage.setItem('biotec_cursando', JSON.stringify([...cursando]));
+    }
 
     function estaDesbloqueada(materia) {
       if (!materia.correlativas) return true;
       return materia.correlativas.every(c => aprobadas.has(c));
     }
 
-    function renderMalla() {
+    // Mostrar notificación no intrusiva
+    function mostrarNotificacion(mensaje) {
+      const noti = document.getElementById('notificacion');
+      noti.textContent = mensaje;
+      noti.classList.add('show');
+      setTimeout(() => {
+        noti.classList.remove('show');
+      }, 3000);
+    }
+
+    function renderMalla(filtro = '') {
       const mallaDiv = document.getElementById("malla");
       mallaDiv.innerHTML = "";
       mallaDiv.style.display = "flex";
       mallaDiv.style.flexWrap = "wrap";
+
+      const filtroMinuscula = filtro.toLowerCase();
 
       for (const [anio, cuatris] of Object.entries(materiasPorCuatrimestre)) {
         const anioDiv = document.createElement("div");
@@ -179,6 +239,15 @@
           codigos.forEach(codigo => {
             const materia = materias.find(m => m.codigo === codigo);
             if (!materia) return;
+
+            // Filtro por búsqueda
+            if (
+              filtro &&
+              !materia.codigo.toLowerCase().includes(filtroMinuscula) &&
+              !materia.nombre.toLowerCase().includes(filtroMinuscula)
+            ) {
+              return;
+            }
 
             const div = document.createElement("div");
             div.className = "materia";
@@ -220,7 +289,8 @@
               } else {
                 cursando.add(materia.codigo);
               }
-              renderMalla();
+              guardarProgreso();
+              renderMalla(filtro);
             });
 
             // Doble click para marcar aprobada con felicitación
@@ -232,23 +302,5 @@
               } else {
                 aprobadas.add(materia.codigo);
                 cursando.delete(materia.codigo);
-                alert(`🎉 ¡Felicitaciones! Aprobaste ${materia.codigo} - ${materia.nombre}`);
-              }
-              renderMalla();
-            });
-
-            cuatriDiv.appendChild(div);
-          });
-
-          anioDiv.appendChild(cuatriDiv);
-        }
-
-        mallaDiv.appendChild(anioDiv);
-      }
-    }
-
-    renderMalla();
-  </script>
-</body>
-</html>
+                mostrarNot
 
