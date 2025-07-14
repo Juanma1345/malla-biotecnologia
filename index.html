@@ -6,7 +6,7 @@
   <title>Malla Interactiva - Licenciatura en Biotecnología</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: sans-serif;
       margin: 20px;
       background-color: #f0f4f8;
     }
@@ -20,7 +20,8 @@
       transition: background-color 0.3s, opacity 0.3s;
       opacity: 0.6;
       user-select: none;
-      white-space: nowrap;
+      max-width: 280px;
+      word-wrap: break-word;
     }
     .materia:hover {
       background-color: #dff0d8;
@@ -79,26 +80,31 @@
       padding: 4px;
       border-radius: 4px;
     }
-    #estadisticas {
-      margin-bottom: 15px;
-      font-weight: bold;
-    }
-    #botones {
-      margin-bottom: 15px;
-    }
+    /* Notificación */
     #notificacion {
       position: fixed;
-      top: 10px;
-      right: 10px;
+      top: 20px;
+      right: 20px;
       background-color: #4caf50;
       color: white;
-      padding: 10px 20px;
-      border-radius: 5px;
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      font-weight: bold;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.5s;
-      font-weight: bold;
+      transition: opacity 0.4s;
       z-index: 1000;
+      max-width: 300px;
+    }
+    #notificacion.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    /* Estadísticas */
+    #estadisticas {
+      font-weight: bold;
+      margin-bottom: 15px;
     }
   </style>
 </head>
@@ -106,13 +112,12 @@
   <h1>Malla Interactiva - Licenciatura en Biotecnología</h1>
   <p><em>Doble clic sobre una materia para marcarla aprobada (verde). Clic simple para marcarla cursando (amarillo). Las correlativas se desbloquean automáticamente.</em></p>
 
-  <div id="estadisticas">Aprobadas: 0 | Cursando: 0 | Bloqueadas: 0</div>
-  <div id="botones">
-    <button id="exportar">Exportar progreso</button>
-    <button id="importar">Importar progreso</button>
-    <input type="file" id="inputImportar" style="display:none" accept=".json" />
+  <div id="estadisticas">
+    Aprobadas: 0 | Cursando: 0 | Bloqueadas: 0
   </div>
+
   <div id="malla"></div>
+
   <div id="notificacion"></div>
 
   <script>
@@ -174,50 +179,49 @@
       { codigo: "N9", nombre: "PROYECTOS BIOTECNOLÓGICOS", correlativas: ["N13", "N8", "00159", "00162", "N7"] },
     ];
 
-    const aprobadas = new Set();
-    const cursando = new Set();
+    let aprobadas = new Set();
+    let cursando = new Set();
+
+    // Cargar desde localStorage
+    function cargarProgreso() {
+      const aprobadasLS = localStorage.getItem('biotec_aprobadas');
+      const cursandoLS = localStorage.getItem('biotec_cursando');
+      if (aprobadasLS) aprobadas = new Set(JSON.parse(aprobadasLS));
+      if (cursandoLS) cursando = new Set(JSON.parse(cursandoLS));
+    }
+    // Guardar en localStorage
+    function guardarProgreso() {
+      localStorage.setItem('biotec_aprobadas', JSON.stringify([...aprobadas]));
+      localStorage.setItem('biotec_cursando', JSON.stringify([...cursando]));
+    }
 
     function estaDesbloqueada(materia) {
       if (!materia.correlativas) return true;
       return materia.correlativas.every(c => aprobadas.has(c));
     }
 
+    // Mostrar notificación no intrusiva
+    function mostrarNotificacion(mensaje) {
+      const noti = document.getElementById('notificacion');
+      noti.textContent = mensaje;
+      noti.classList.add('show');
+      setTimeout(() => {
+        noti.classList.remove('show');
+      }, 3000);
+    }
+
+    // Actualizar estadísticas
     function actualizarEstadisticas() {
-      const totales = materias.length;
       const aprobCount = aprobadas.size;
       const cursCount = cursando.size;
-      const bloqueadasCount = materias.filter(m => !estaDesbloqueada(m)).length;
+      let bloqueadasCount = 0;
+      for (const materia of materias) {
+        if (!estaDesbloqueada(materia) && !aprobadas.has(materia.codigo)) {
+          bloqueadasCount++;
+        }
+      }
       document.getElementById("estadisticas").textContent = 
         `Aprobadas: ${aprobCount} | Cursando: ${cursCount} | Bloqueadas: ${bloqueadasCount}`;
-    }
-
-    function mostrarNotificacion(texto) {
-      const noti = document.getElementById("notificacion");
-      noti.textContent = texto;
-      noti.style.opacity = "1";
-      setTimeout(() => {
-        noti.style.opacity = "0";
-      }, 2000);
-    }
-
-    function guardarProgreso() {
-      const data = {
-        aprobadas: Array.from(aprobadas),
-        cursando: Array.from(cursando)
-      };
-      localStorage.setItem("progresoBiotec", JSON.stringify(data));
-    }
-
-    function cargarProgreso() {
-      const dataStr = localStorage.getItem("progresoBiotec");
-      if (!dataStr) return;
-      try {
-        const data = JSON.parse(dataStr);
-        data.aprobadas.forEach(c => aprobadas.add(c));
-        data.cursando.forEach(c => cursando.add(c));
-      } catch(e) {
-        console.warn("Error cargando progreso:", e);
-      }
     }
 
     function renderMalla() {
@@ -292,7 +296,7 @@
               renderMalla();
             });
 
-            // Doble click para marcar aprobada
+            // Doble click para marcar aprobada con felicitación
             div.addEventListener("dblclick", (e) => {
               if (!estaDesbloqueada(materia)) return;
               e.stopPropagation();
@@ -319,50 +323,9 @@
       actualizarEstadisticas();
     }
 
-    // Botones exportar e importar
-    document.getElementById("exportar").addEventListener("click", () => {
-      const data = {
-        aprobadas: Array.from(aprobadas),
-        cursando: Array.from(cursando)
-      };
-      const json = JSON.stringify(data, null, 2);
-      const blob = new Blob([json], {type: "application/json"});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "progreso_biotecnologia.json";
-      a.click();
-      URL.revokeObjectURL(url);
-    });
-
-    document.getElementById("importar").addEventListener("click", () => {
-      document.getElementById("inputImportar").click();
-    });
-
-    document.getElementById("inputImportar").addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        try {
-          const data = JSON.parse(event.target.result);
-          aprobadas.clear();
-          cursando.clear();
-          data.aprobadas.forEach(c => aprobadas.add(c));
-          data.cursando.forEach(c => cursando.add(c));
-          guardarProgreso();
-          renderMalla();
-        } catch(err) {
-          alert("Error al importar el archivo");
-        }
-      };
-      reader.readAsText(file);
-      e.target.value = "";
-    });
-
-    // Cargar progreso guardado y mostrar
     cargarProgreso();
     renderMalla();
   </script>
 </body>
 </html>
+
