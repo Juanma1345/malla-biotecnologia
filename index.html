@@ -223,7 +223,7 @@
               renderMalla();
             });
 
-            // Doble click para marcar aprobada
+            // Doble click para marcar aprobada con felicitación
             div.addEventListener("dblclick", (e) => {
               if (!estaDesbloqueada(materia)) return;
               e.stopPropagation();
@@ -232,6 +232,7 @@
               } else {
                 aprobadas.add(materia.codigo);
                 cursando.delete(materia.codigo);
+                alert(`🎉 ¡Felicitaciones! Aprobaste ${materia.codigo} - ${materia.nombre}`);
               }
               renderMalla();
             });
