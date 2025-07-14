@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Malla Interactiva - Licenciatura en Biotecnología</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+      background-color: #f0f4f8;
+    }
+    .materia {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin: 5px;
+      background-color: #ffffff;
+      cursor: pointer;
+      transition: background-color 0.3s, opacity 0.3s;
+      opacity: 0.6;
+    }
+    .materia:hover {
+      background-color: #dff0d8;
+    }
+    .materia.aprobada {
+      background-color: #c8e6c9;
+      opacity: 1;
+    }
+    .materia.desbloqueada {
+      opacity: 1;
+    }
+    .correlativas {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #eef;
+      border-radius: 6px;
+      display: none;
+    }
+    .anio {
+      margin-bottom: 30px;
+      padding: 10px;
+      border-left: 6px solid #0074D9;
+      background-color: #e3ecf5;
+      border-radius: 8px;
+    }
+    .titulo-anio {
+      font-size: 1.4em;
+      margin-bottom: 10px;
+    }
+    .cuatrimestre {
+      margin-bottom: 20px;
+      padding-left: 15px;
+    }
+    .titulo-cuatrimestre {
+      font-size: 1.1em;
+      font-weight: bold;
+      margin-bottom: 5px;
+      border-bottom: 1px dashed #aaa;
+    }
+  </style>
+</head>
+<body>
+  <h1>Malla Interactiva - Licenciatura en Biotecnología</h1>
+  <p><em>Haz doble clic sobre una materia para marcarla como aprobada. Se desbloquean automáticamente las correlativas.</em></p>
+  <div id="malla"></div>
+
+  <script>
+    const materiasPorCuatrimestre = {
+      "1ºAÑO": {
+        "1º CUATRIMESTRE": ["N1", "CB02", "CB03", "CB04"],
+        "2º CUATRIMESTRE": ["N2", "CB06", "CB07", "CB08"]
+      },
+      "2ºAÑO": {
+        "3º CUATRIMESTRE": ["CB12", "N10", "CB10"],
+        "4º CUATRIMESTRE": ["N3", "CB11", "CB14", "N4"]
+      },
+      "3ºAÑO": {
+        "5º CUATRIMESTRE": ["CB16", "CB17", "N5", "CB19"],
+        "6º CUATRIMESTRE": ["N11", "CB22", "N7"]
+      },
+      "4ºAÑO": {
+        "7º CUATRIMESTRE": ["CB23", "N12", "N6"],
+        "8º CUATRIMESTRE": ["00157", "00162", "00155"]
+      },
+      "5ºAÑO": {
+        "9º CUATRIMESTRE": ["00159", "N8", "N13"],
+        "10º CUATRIMESTRE": ["N9"]
+      }
+    };
+
+    const materias = [
+      { codigo: "N1", nombre: "ANÁLISIS 1" },
+      { codigo: "CB02", nombre: "CIENCIA, TECNOLOGÍA Y SOCIEDAD" },
+      { codigo: "CB03", nombre: "QUÍMICA GENERAL" },
+      { codigo: "CB04", nombre: "BIOLOGÍA I" },
+      { codigo: "N2", nombre: "INTRODUCCIÓN A LA BIOTECNOLOGÍA", correlativas: ["CB04", "CB02"] },
+      { codigo: "CB06", nombre: "ÁLGEBRA Y GEOMETRÍA ANALÍTICA" },
+      { codigo: "CB07", nombre: "BIOLOGÍA II", correlativas: ["CB03", "CB04"] },
+      { codigo: "CB08", nombre: "QUÍMICA INORGÁNICA", correlativas: ["N1", "CB03"] },
+      { codigo: "CB12", nombre: "QUÍMICA ORGÁNICA", correlativas: ["CB08"] },
+      { codigo: "N10", nombre: "ANÁLISIS II", correlativas: ["N1"] },
+      { codigo: "CB10", nombre: "FÍSICA I", correlativas: ["N1"] },
+      { codigo: "N3", nombre: "FÍSICA II", correlativas: ["N10", "CB10"] },
+      { codigo: "CB11", nombre: "BIOLOGÍA III", correlativas: ["CB07"] },
+      { codigo: "CB14", nombre: "ESTADÍSTICA APLICADA", correlativas: ["N1", "CB06"] },
+      { codigo: "N4", nombre: "QUÍMICA BIOLÓGICA I", correlativas: ["CB07", "CB12"] },
+      { codigo: "CB16", nombre: "FISICOQUÍMICA", correlativas: ["CB08", "N3"] },
+      { codigo: "CB17", nombre: "GENÉTICA GENERAL", correlativas: ["CB07", "CB14", "N4"] },
+      { codigo: "N5", nombre: "QUÍMICA BIOLÓGICA II", correlativas: ["N4"] },
+      { codigo: "CB19", nombre: "BIOLOGÍA IV", correlativas: ["CB07", "CB12"] },
+      { codigo: "N11", nombre: "MICROBIOLOGÍA", correlativas: ["N2", "N5", "CB17"] },
+      { codigo: "CB22", nombre: "BIOLOGÍA CELULAR", correlativas: ["N5", "CB11"] },
+      { codigo: "N7", nombre: "INTRODUCCIÓN A LA BIOINFORMÁTICA", correlativas: ["CB14", "CB07"] },
+      { codigo: "CB23", nombre: "INMUNOLOGÍA BÁSICA", correlativas: ["N5", "CB17"] },
+      { codigo: "N12", nombre: "GENÉTICA MOLECULAR", correlativas: ["CB17", "N11", "CB22"] },
+      { codigo: "N6", nombre: "QUÍMICA ANALÍTICA", correlativas: ["CB12", "CB14", "CB16"] },
+      { codigo: "00157", nombre: "INMUNOLOGÍA MOLECULAR", correlativas: ["CB23", "N12"] },
+      { codigo: "00162", nombre: "BIOTECNOLOGÍA ANIMAL", correlativas: ["N12"] },
+      { codigo: "00155", nombre: "BIOQUÍMICA DE PROTEÍNAS", correlativas: ["N5", "N6", "CB16"] },
+      { codigo: "00159", nombre: "BIOTECNOLOGÍA VEGETAL", correlativas: ["CB19", "N7", "N12"] },
+      { codigo: "N8", nombre: "BIOPROCESOS", correlativas: ["N11", "N12", "CB16"] },
+      { codigo: "N13", nombre: "MÉTODOS DE ANÁLISIS DE BIOMOLÉCULAS", correlativas: ["N6", "00157", "N7"] },
+      { codigo: "N9", nombre: "PROYECTOS BIOTECNOLÓGICOS", correlativas: ["N13", "N8", "00159", "00162", "N7"] },
+    ];
+
+    const aprobadas = new Set();
+
+    function estaDesbloqueada(materia) {
+      if (!materia.correlativas) return true;
+      return materia.correlativas.every(c => aprobadas.has(c));
+    }
+
+    function renderMalla() {
+      const mallaDiv = document.getElementById("malla");
+      mallaDiv.innerHTML = "";
+
+      for (const [anio, cuatris] of Object.entries(materiasPorCuatrimestre)) {
+        const anioDiv = document.createElement("div");
+        anioDiv.className = "anio";
+
+        const tituloAnio = document.createElement("div");
+        tituloAnio.className = "titulo-anio";
+        tituloAnio.textContent = anio;
+        anioDiv.appendChild(tituloAnio);
+
+        for (const [cuatri, codigos] of Object.entries(cuatris)) {
+          const cuatriDiv = document.createElement("div");
+          cuatriDiv.className = "cuatrimestre";
+
+          const titulo = document.createElement("div");
+          titulo.className = "titulo-cuatrimestre";
+          titulo.textContent = cuatri;
+          cuatriDiv.appendChild(titulo);
+
+          codigos.forEach(codigo => {
+            const materia = materias.find(m => m.codigo === codigo);
+            if (!materia) return;
+
+            const div = document.createElement("div");
+            div.className = "materia";
+            div.id = materia.codigo;
+            div.textContent = `${materia.codigo} - ${materia.nombre}`;
+
+            if (aprobadas.has(materia.codigo)) {
+              div.classList.add("aprobada");
+            } else if (estaDesbloqueada(materia)) {
+              div.classList.add("desbloqueada");
+            }
+
+            if (materia.correlativas) {
+              const correlativasDiv = document.createElement("div");
+              correlativasDiv.className = "correlativas";
+              correlativasDiv.innerHTML = `<strong>Correlativas:</strong> ${materia.correlativas.join(", ")}`;
+              div.appendChild(correlativasDiv);
+
+              div.addEventListener("click", () => {
+                correlativasDiv.style.display = correlativasDiv.style.display === "none" ? "block" : "none";
+              });
+            }
+
+            div.addEventListener("dblclick", () => {
+              if (aprobadas.has(materia.codigo)) {
+                aprobadas.delete(materia.codigo);
+              } else {
+                aprobadas.add(materia.codigo);
+              }
+              renderMalla();
+            });
+
+            cuatriDiv.appendChild(div);
+          });
+
+          anioDiv.appendChild(cuatriDiv);
+        }
+
+        mallaDiv.appendChild(anioDiv);
+      }
+    }
+
+    renderMalla();
+  </script>
+</body>
+</html>
