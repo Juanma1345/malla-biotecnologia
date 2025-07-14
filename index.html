@@ -302,5 +302,31 @@
               } else {
                 aprobadas.add(materia.codigo);
                 cursando.delete(materia.codigo);
-                mostrarNot
+                mostrarNotificacion(`¡Felicitaciones! Has aprobado ${materia.nombre} 🎉`);
+              }
+              guardarProgreso();
+              renderMalla(filtro);
+            });
+
+            cuatriDiv.appendChild(div);
+          });
+
+          anioDiv.appendChild(cuatriDiv);
+        }
+
+        mallaDiv.appendChild(anioDiv);
+      }
+    }
+
+    // Event listener para el buscador
+    document.getElementById('buscador').addEventListener('input', (e) => {
+      renderMalla(e.target.value);
+    });
+
+    cargarProgreso();
+    renderMalla();
+  </script>
+</body>
+</html>
+
 
