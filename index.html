@@ -5,12 +5,106 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Malla Interactiva - Licenciatura en Biotecnología</title>
   <style>
-    /* ... mismo CSS que antes ... */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f0f4f8;
+    }
+    .materia {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin: 5px;
+      background-color: #ffffff;
+      cursor: pointer;
+      transition: background-color 0.3s, opacity 0.3s;
+      opacity: 0.6;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .materia:hover {
+      background-color: #dff0d8;
+    }
+    .materia.bloqueada {
+      background-color: #555;
+      opacity: 0.4;
+      cursor: default;
+    }
+    .materia.cursando {
+      background-color: #fff176; /* amarillo claro */
+      opacity: 1;
+    }
+    .materia.aprobada {
+      background-color: #4caf50; /* verde fuerte */
+      opacity: 1;
+    }
+    .materia.desbloqueada {
+      opacity: 1;
+    }
+    .correlativas {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #eef;
+      border-radius: 6px;
+      display: none;
+      user-select: text;
+    }
+    .anio {
+      display: inline-block;
+      vertical-align: top;
+      margin-right: 20px;
+      margin-bottom: 30px;
+      padding: 10px;
+      border: 2px solid #0074D9;
+      background-color: #e3ecf5;
+      border-radius: 8px;
+      width: 300px;
+    }
+    .titulo-anio {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+      text-align: center;
+      font-weight: bold;
+    }
+    .cuatrimestre {
+      margin-bottom: 20px;
+      padding: 5px;
+    }
+    .titulo-cuatrimestre {
+      font-size: 1em;
+      font-weight: bold;
+      margin-bottom: 5px;
+      text-align: center;
+      background-color: #cce0f5;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    #estadisticas {
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    #botones {
+      margin-bottom: 15px;
+    }
+    #notificacion {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background-color: #4caf50;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s;
+      font-weight: bold;
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
   <h1>Malla Interactiva - Licenciatura en Biotecnología</h1>
-  <!-- QUITÉ EL BUSCADOR -->
+  <p><em>Doble clic sobre una materia para marcarla aprobada (verde). Clic simple para marcarla cursando (amarillo). Las correlativas se desbloquean automáticamente.</em></p>
 
   <div id="estadisticas">Aprobadas: 0 | Cursando: 0 | Bloqueadas: 0</div>
   <div id="botones">
@@ -22,12 +116,115 @@
   <div id="notificacion"></div>
 
   <script>
-    // ... mismo código JS que antes pero quitando toda referencia a filtro ...
+    const materiasPorCuatrimestre = {
+      "1ºAÑO": {
+        "1º CUATRIMESTRE": ["N1", "CB02", "CB03", "CB04"],
+        "2º CUATRIMESTRE": ["N2", "CB06", "CB07", "CB08"]
+      },
+      "2ºAÑO": {
+        "3º CUATRIMESTRE": ["CB12", "N10", "CB10"],
+        "4º CUATRIMESTRE": ["N3", "CB11", "CB14", "N4"]
+      },
+      "3ºAÑO": {
+        "5º CUATRIMESTRE": ["CB16", "CB17", "N5", "CB19"],
+        "6º CUATRIMESTRE": ["N11", "CB22", "N7"]
+      },
+      "4ºAÑO": {
+        "7º CUATRIMESTRE": ["CB23", "N12", "N6"],
+        "8º CUATRIMESTRE": ["00157", "00162", "00155"]
+      },
+      "5ºAÑO": {
+        "9º CUATRIMESTRE": ["00159", "N8", "N13"],
+        "10º CUATRIMESTRE": ["N9"]
+      }
+    };
 
-    // Render sin filtro:
+    const materias = [
+      { codigo: "N1", nombre: "ANÁLISIS 1" },
+      { codigo: "CB02", nombre: "CIENCIA, TECNOLOGÍA Y SOCIEDAD" },
+      { codigo: "CB03", nombre: "QUÍMICA GENERAL" },
+      { codigo: "CB04", nombre: "BIOLOGÍA I" },
+      { codigo: "N2", nombre: "INTRODUCCIÓN A LA BIOTECNOLOGÍA", correlativas: ["CB04", "CB02"] },
+      { codigo: "CB06", nombre: "ÁLGEBRA Y GEOMETRÍA ANALÍTICA" },
+      { codigo: "CB07", nombre: "BIOLOGÍA II", correlativas: ["CB03", "CB04"] },
+      { codigo: "CB08", nombre: "QUÍMICA INORGÁNICA", correlativas: ["N1", "CB03"] },
+      { codigo: "CB12", nombre: "QUÍMICA ORGÁNICA", correlativas: ["CB08"] },
+      { codigo: "N10", nombre: "ANÁLISIS II", correlativas: ["N1"] },
+      { codigo: "CB10", nombre: "FÍSICA I", correlativas: ["N1"] },
+      { codigo: "N3", nombre: "FÍSICA II", correlativas: ["N10", "CB10"] },
+      { codigo: "CB11", nombre: "BIOLOGÍA III", correlativas: ["CB07"] },
+      { codigo: "CB14", nombre: "ESTADÍSTICA APLICADA", correlativas: ["N1", "CB06"] },
+      { codigo: "N4", nombre: "QUÍMICA BIOLÓGICA I", correlativas: ["CB07", "CB12"] },
+      { codigo: "CB16", nombre: "FISICOQUÍMICA", correlativas: ["CB08", "N3"] },
+      { codigo: "CB17", nombre: "GENÉTICA GENERAL", correlativas: ["CB07", "CB14", "N4"] },
+      { codigo: "N5", nombre: "QUÍMICA BIOLÓGICA II", correlativas: ["N4"] },
+      { codigo: "CB19", nombre: "BIOLOGÍA IV", correlativas: ["CB07", "CB12"] },
+      { codigo: "N11", nombre: "MICROBIOLOGÍA", correlativas: ["N2", "N5", "CB17"] },
+      { codigo: "CB22", nombre: "BIOLOGÍA CELULAR", correlativas: ["N5", "CB11"] },
+      { codigo: "N7", nombre: "INTRODUCCIÓN A LA BIOINFORMÁTICA", correlativas: ["CB14", "CB07"] },
+      { codigo: "CB23", nombre: "INMUNOLOGÍA BÁSICA", correlativas: ["N5", "CB17"] },
+      { codigo: "N12", nombre: "GENÉTICA MOLECULAR", correlativas: ["CB17", "N11", "CB22"] },
+      { codigo: "N6", nombre: "QUÍMICA ANALÍTICA", correlativas: ["CB12", "CB14", "CB16"] },
+      { codigo: "00157", nombre: "INMUNOLOGÍA MOLECULAR", correlativas: ["CB23", "N12"] },
+      { codigo: "00162", nombre: "BIOTECNOLOGÍA ANIMAL", correlativas: ["N12"] },
+      { codigo: "00155", nombre: "BIOQUÍMICA DE PROTEÍNAS", correlativas: ["N5", "N6", "CB16"] },
+      { codigo: "00159", nombre: "BIOTECNOLOGÍA VEGETAL", correlativas: ["CB19", "N7", "N12"] },
+      { codigo: "N8", nombre: "BIOPROCESOS", correlativas: ["N11", "N12", "CB16"] },
+      { codigo: "N13", nombre: "MÉTODOS DE ANÁLISIS DE BIOMOLÉCULAS", correlativas: ["N6", "00157", "N7"] },
+      { codigo: "N9", nombre: "PROYECTOS BIOTECNOLÓGICOS", correlativas: ["N13", "N8", "00159", "00162", "N7"] },
+    ];
+
+    const aprobadas = new Set();
+    const cursando = new Set();
+
+    function estaDesbloqueada(materia) {
+      if (!materia.correlativas) return true;
+      return materia.correlativas.every(c => aprobadas.has(c));
+    }
+
+    function actualizarEstadisticas() {
+      const totales = materias.length;
+      const aprobCount = aprobadas.size;
+      const cursCount = cursando.size;
+      const bloqueadasCount = materias.filter(m => !estaDesbloqueada(m)).length;
+      document.getElementById("estadisticas").textContent = 
+        `Aprobadas: ${aprobCount} | Cursando: ${cursCount} | Bloqueadas: ${bloqueadasCount}`;
+    }
+
+    function mostrarNotificacion(texto) {
+      const noti = document.getElementById("notificacion");
+      noti.textContent = texto;
+      noti.style.opacity = "1";
+      setTimeout(() => {
+        noti.style.opacity = "0";
+      }, 2000);
+    }
+
+    function guardarProgreso() {
+      const data = {
+        aprobadas: Array.from(aprobadas),
+        cursando: Array.from(cursando)
+      };
+      localStorage.setItem("progresoBiotec", JSON.stringify(data));
+    }
+
+    function cargarProgreso() {
+      const dataStr = localStorage.getItem("progresoBiotec");
+      if (!dataStr) return;
+      try {
+        const data = JSON.parse(dataStr);
+        data.aprobadas.forEach(c => aprobadas.add(c));
+        data.cursando.forEach(c => cursando.add(c));
+      } catch(e) {
+        console.warn("Error cargando progreso:", e);
+      }
+    }
+
     function renderMalla() {
       const mallaDiv = document.getElementById("malla");
       mallaDiv.innerHTML = "";
+      mallaDiv.style.display = "flex";
+      mallaDiv.style.flexWrap = "wrap";
 
       for (const [anio, cuatris] of Object.entries(materiasPorCuatrimestre)) {
         const anioDiv = document.createElement("div");
@@ -122,14 +319,50 @@
       actualizarEstadisticas();
     }
 
-    // Resto del código igual: exportar/importar, localStorage, etc.
+    // Botones exportar e importar
+    document.getElementById("exportar").addEventListener("click", () => {
+      const data = {
+        aprobadas: Array.from(aprobadas),
+        cursando: Array.from(cursando)
+      };
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], {type: "application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "progreso_biotecnologia.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
 
-    // Cargar progreso guardado
+    document.getElementById("importar").addEventListener("click", () => {
+      document.getElementById("inputImportar").click();
+    });
+
+    document.getElementById("inputImportar").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const data = JSON.parse(event.target.result);
+          aprobadas.clear();
+          cursando.clear();
+          data.aprobadas.forEach(c => aprobadas.add(c));
+          data.cursando.forEach(c => cursando.add(c));
+          guardarProgreso();
+          renderMalla();
+        } catch(err) {
+          alert("Error al importar el archivo");
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = "";
+    });
+
+    // Cargar progreso guardado y mostrar
     cargarProgreso();
     renderMalla();
-
-    // Listeners exportar/importar etc...
-    // (los mismos que en el código anterior)
   </script>
 </body>
 </html>
